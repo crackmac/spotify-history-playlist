@@ -46,6 +46,7 @@ const listTracksCommand = program
   .description('List tracks from listening history (default command)')
   .option('--date <date>', 'Use a specific date (YYYY-MM-DD). Default: today')
   .option('--all', 'Show all tracks including duplicates. Default: show only unique tracks', false)
+  .option('--debug', 'Show debug information including timezone details', false)
   .action(async (options) => {
     try {
       const config = loadConfig();
@@ -59,7 +60,7 @@ const listTracksCommand = program
       const dateLabel = targetDate ? formatDate(targetDate) : 'today';
 
       console.log(`Fetching listening history for ${dateLabel}...`);
-      const tracks = await historyFetcher.getTodaysTracks(targetDate);
+      const tracks = await historyFetcher.getTodaysTracks(targetDate, options.debug);
 
       if (tracks.length === 0) {
         console.log(`No tracks found for ${dateLabel}.`);
@@ -100,7 +101,7 @@ program
       const dateLabel = targetDate ? formatDate(targetDate) : 'today';
 
       console.log(`Fetching listening history for ${dateLabel}...`);
-      const tracks = await historyFetcher.getTodaysTracks(targetDate);
+      const tracks = await historyFetcher.getTodaysTracks(targetDate, false);
 
       if (tracks.length === 0) {
         console.log(`No tracks found for ${dateLabel}.`);

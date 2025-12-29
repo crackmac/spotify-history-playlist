@@ -1,6 +1,6 @@
 import SpotifyWebApi from 'spotify-web-api-node';
 import { Track } from '../types';
-import { isToday, isDate, getDateBoundaries } from '../utils/dateUtils';
+import { isToday, isDate, getDateBoundaries, isDateUTC, getDateBoundariesUTC } from '../utils/dateUtils';
 import { filterMusicTracks } from '../utils/trackUtils';
 
 export class HistoryFetcher {
@@ -10,12 +10,22 @@ export class HistoryFetcher {
     this.spotifyApi = spotifyApi;
   }
 
-  async getTodaysTracks(targetDate?: Date): Promise<Track[]> {
+  async getTodaysTracks(targetDate?: Date, debug: boolean = false): Promise<Track[]> {
     const allTracks: Track[] = [];
     let before: number | undefined = undefined;
     let hasMore = true;
     const filterDate = targetDate || new Date();
-    const { start: dateStart } = getDateBoundaries(filterDate);
+    const { startUTC, endUTC } = getDateBoundariesUTC(filterDate);
+    const now = new Date();
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    let totalFetched = 0;
+
+    if (debug) {
+      console.log(`\n[DEBUG] Filtering for date: ${filterDate.toLocaleDateString()}`);
+      console.log(`[DEBUG] Local date boundaries: ${getDateBoundaries(filterDate).start.toLocaleString()} to ${getDateBoundaries(filterDate).end.toLocaleString()}`);
+      console.log(`[DEBUG] UTC date boundaries: ${startUTC.toISOString()} to ${endUTC.toISOString()}`);
+      console.log(`[DEBUG] 24-hour window starts at: ${twentyFourHoursAgo.toISOString()}\n`);
+    }
 
     while (hasMore) {
       try {
@@ -48,32 +58,40 @@ export class HistoryFetcher {
           })
           .filter((track: Track | null): track is Track => track !== null);
 
-        const filteredTracks = targetDate 
-          ? tracks.filter((track: Track) => isDate(track.playedAt, filterDate))
-          : tracks.filter((track: Track) => isToday(track.playedAt));
-        
-        if (filteredTracks.length === 0) {
-          const oldestTrack = tracks[tracks.length - 1];
-          if (oldestTrack && oldestTrack.playedAt < dateStart) {
-            hasMore = false;
-            break;
-          }
-        }
+        totalFetched += tracks.length;
 
+        const filteredTracks = targetDate 
+          ? tracks.filter((track: Track) => isDateUTC(track.playedAt, filterDate))
+          : tracks.filter((track: Track) => isDateUTC(track.playedAt, new Date()));
+        
         allTracks.push(...filteredTracks);
+
+        if (debug && tracks.length > 0) {
+          const oldestTrack = tracks[tracks.length - 1];
+          const newestTrack = tracks[0];
+          console.log(`[DEBUG] Batch: ${tracks.length} tracks fetched, ${filteredTracks.length} matched date filter`);
+          console.log(`[DEBUG]   Oldest: ${oldestTrack.name} at ${oldestTrack.playedAt.toISOString()} (${oldestTrack.playedAt.toLocaleString()})`);
+          console.log(`[DEBUG]   Newest: ${newestTrack.name} at ${newestTrack.playedAt.toISOString()} (${newestTrack.playedAt.toLocaleString()})`);
+        }
 
         if (tracks.length < 50) {
           hasMore = false;
         } else {
           const lastTrack = tracks[tracks.length - 1];
-          const isLastTrackInDate = targetDate 
-            ? isDate(lastTrack.playedAt, filterDate)
-            : isToday(lastTrack.playedAt);
+          const lastTrackTime = lastTrack.playedAt.getTime();
           
-          if (!isLastTrackInDate && lastTrack.playedAt < dateStart) {
+          if (lastTrackTime < startUTC.getTime()) {
             hasMore = false;
+            if (debug) {
+              console.log(`[DEBUG] Stopping: oldest track (${lastTrack.playedAt.toISOString()}) is before target date start (${startUTC.toISOString()})`);
+            }
+          } else if (lastTrackTime < twentyFourHoursAgo.getTime()) {
+            hasMore = false;
+            if (debug) {
+              console.log(`[DEBUG] Stopping: oldest track (${lastTrack.playedAt.toISOString()}) is beyond 24-hour window`);
+            }
           } else {
-            before = Math.floor(lastTrack.playedAt.getTime());
+            before = Math.floor(lastTrackTime);
           }
         }
 
@@ -87,6 +105,11 @@ export class HistoryFetcher {
         }
         throw error;
       }
+    }
+
+    if (debug) {
+      console.log(`\n[DEBUG] Total tracks fetched: ${totalFetched}`);
+      console.log(`[DEBUG] Total tracks matching date filter: ${allTracks.length}`);
     }
 
     return filterMusicTracks(allTracks);

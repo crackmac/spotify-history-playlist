@@ -154,6 +154,7 @@ npm run dev create-playlist -- --dry-run
 - `list-tracks` (or `list`) - List tracks from listening history (default command)
   - `--date <YYYY-MM-DD>` - Use a specific date. Default: today
   - `--all` - Show all tracks including duplicates. Default: show only unique tracks
+  - `--debug` - Show debug information including timezone details and pagination info
 - `create-playlist` (or `create`) - Create a playlist from listening history
   - `--dry-run` - Preview changes without creating playlist
   - `--date <YYYY-MM-DD>` - Use a specific date. Default: today
@@ -175,6 +176,9 @@ npm run dev list-tracks -- --all
 # List all tracks for a specific date
 npm run dev list-tracks -- --date 2024-01-15 --all
 
+# Debug mode (shows timezone info and pagination details)
+npm run dev list-tracks -- --date 2024-01-15 --debug
+
 # Create playlist for today
 npm run dev create-playlist
 
@@ -188,11 +192,21 @@ npm run dev create-playlist -- --date 2024-01-15
 ## How It Works
 
 1. **Authentication**: Uses OAuth 2.0 with Authorization Code flow. Tokens are stored locally in `.spotify-tokens.json`
-2. **History Fetching**: Fetches recently played tracks from Spotify API and filters to today (midnight-to-now in your timezone)
-3. **Filtering**: Filters to music tracks only (excludes podcasts/episodes)
-4. **Deduplication**: Removes duplicate tracks (if you played the same song multiple times)
-5. **Playlist Creation**: Creates a new private playlist named "Today's History - YYYY-MM-DD"
-6. **Track Addition**: Adds all unique tracks to the playlist in batches
+2. **History Fetching**: Fetches recently played tracks from Spotify API and filters to the target date (midnight-to-midnight in your timezone)
+3. **Timezone Handling**: Properly converts UTC timestamps from Spotify to local timezone for accurate date filtering
+4. **Filtering**: Filters to music tracks only (excludes podcasts/episodes)
+5. **Deduplication**: Removes duplicate tracks (if you played the same song multiple times) - use `--all` to see all tracks
+6. **Playlist Creation**: Creates a new private playlist named "Today's History - YYYY-MM-DD"
+7. **Track Addition**: Adds all unique tracks to the playlist in batches
+
+## API Limitations
+
+⚠️ **Important**: Spotify's Recently Played API has limitations:
+- Only returns tracks from the **last 24 hours**
+- Maximum 50 tracks per request (pagination handles this automatically)
+- Historical data beyond 24 hours is not available via the API
+
+See [API_LIMITATIONS.md](./API_LIMITATIONS.md) for detailed information about these limitations and how the tool handles them.
 
 ## Troubleshooting
 
@@ -208,8 +222,10 @@ npm run dev create-playlist -- --date 2024-01-15
 ### No Tracks Found
 
 - Make sure you've actually played music on Spotify today
-- Check your timezone settings
-- Spotify's "recently played" API may have limitations on how far back it goes
+- **Important**: Spotify's API only returns tracks from the **last 24 hours**
+- If looking for yesterday's tracks, they may not be available if played more than 24 hours ago
+- Use `--debug` flag to see timezone information and pagination details
+- Check timezone handling: Spotify returns timestamps in UTC, which are now properly converted for comparison
 
 ### Rate Limiting
 

@@ -19,6 +19,20 @@ export function getDateBoundaries(targetDate: Date): { start: Date; end: Date } 
   return { start, end };
 }
 
+export function getDateBoundariesUTC(targetDate: Date): { startUTC: Date; endUTC: Date } {
+  const localStart = new Date(targetDate);
+  localStart.setHours(0, 0, 0, 0);
+  
+  const localEnd = new Date(targetDate);
+  localEnd.setHours(23, 59, 59, 999);
+  
+  const timezoneOffsetMs = localStart.getTimezoneOffset() * 60 * 1000;
+  const startUTC = new Date(localStart.getTime() + timezoneOffsetMs);
+  const endUTC = new Date(localEnd.getTime() + timezoneOffsetMs);
+  
+  return { startUTC, endUTC };
+}
+
 export function isToday(date: Date): boolean {
   const { start, end } = getTodayBoundaries();
   return date >= start && date <= end;
@@ -29,11 +43,30 @@ export function isDate(date: Date, targetDate: Date): boolean {
   return date >= start && date <= end;
 }
 
+export function isDateUTC(dateUTC: Date, targetDate: Date): boolean {
+  const { startUTC, endUTC } = getDateBoundariesUTC(targetDate);
+  return dateUTC >= startUTC && dateUTC <= endUTC;
+}
+
 export function parseDate(dateString: string): Date {
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) {
+  const parts = dateString.split('-');
+  if (parts.length !== 3) {
     throw new Error(`Invalid date format: ${dateString}. Use YYYY-MM-DD format.`);
   }
+  
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  
+  if (isNaN(year) || isNaN(month) || isNaN(day)) {
+    throw new Error(`Invalid date format: ${dateString}. Use YYYY-MM-DD format.`);
+  }
+  
+  const date = new Date(year, month, day);
+  if (isNaN(date.getTime())) {
+    throw new Error(`Invalid date: ${dateString}.`);
+  }
+  
   return date;
 }
 
