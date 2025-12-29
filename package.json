@@ -1,0 +1,35 @@
+{
+  "name": "spotify-history-playlist",
+  "version": "1.0.0",
+  "description": "CLI tool to create Spotify playlists from today's listening history",
+  "main": "dist/index.js",
+  "bin": {
+    "spotify-history-playlist": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/cli.ts",
+    "start": "node dist/cli.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "spotify",
+    "playlist",
+    "history",
+    "cli"
+  ],
+  "author": "Kevin Duane <kevin.duane@disney.com>",
+  "license": "ISC",
+  "dependencies": {
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.7",
+    "spotify-web-api-node": "^5.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "@types/spotify-web-api-node": "^5.0.11",
+    "nodemon": "^3.1.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
