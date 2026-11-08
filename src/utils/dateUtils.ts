@@ -19,18 +19,14 @@ export function getDateBoundaries(targetDate: Date): { start: Date; end: Date } 
   return { start, end };
 }
 
+// A Date is an absolute instant, so local midnight already *is* the right
+// UTC boundary (e.g. 00:00 PST == 08:00Z); toISOString() shows it in UTC.
+// Do not add getTimezoneOffset() on top: that shifts the window by the
+// offset a second time (to 08:00-08:00 local in PST), dropping plays from
+// just after midnight and pulling in the next morning's plays.
 export function getDateBoundariesUTC(targetDate: Date): { startUTC: Date; endUTC: Date } {
-  const localStart = new Date(targetDate);
-  localStart.setHours(0, 0, 0, 0);
-  
-  const localEnd = new Date(targetDate);
-  localEnd.setHours(23, 59, 59, 999);
-  
-  const timezoneOffsetMs = localStart.getTimezoneOffset() * 60 * 1000;
-  const startUTC = new Date(localStart.getTime() + timezoneOffsetMs);
-  const endUTC = new Date(localEnd.getTime() + timezoneOffsetMs);
-  
-  return { startUTC, endUTC };
+  const { start, end } = getDateBoundaries(targetDate);
+  return { startUTC: start, endUTC: end };
 }
 
 export function isToday(date: Date): boolean {
