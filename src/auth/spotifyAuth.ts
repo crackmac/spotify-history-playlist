@@ -185,19 +185,24 @@ export class SpotifyAuth {
     try {
       this.spotifyApi.setRefreshToken(refreshToken);
       const data = await this.spotifyApi.refreshAccessToken();
+      // Spotify may rotate the refresh token; if it does, the old one stops
+      // working, so the new one must be stored and used from now on.
       const { access_token, expires_in } = data.body;
+      const newRefreshToken = data.body.refresh_token || refreshToken;
 
       const existingTokens = this.tokenManager.loadTokens();
       if (existingTokens) {
         const tokenData: TokenData = {
           ...existingTokens,
           accessToken: access_token,
+          refreshToken: newRefreshToken,
           expiresAt: Date.now() + (expires_in * 1000),
         };
         this.tokenManager.saveTokens(tokenData);
       }
 
       this.spotifyApi.setAccessToken(access_token);
+      this.spotifyApi.setRefreshToken(newRefreshToken);
     } catch (error) {
       throw new Error(`Failed to refresh access token: ${error instanceof Error ? error.message : String(error)}`);
     }

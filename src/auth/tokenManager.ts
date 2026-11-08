@@ -13,7 +13,11 @@ export class TokenManager {
 
   saveTokens(tokenData: TokenData): void {
     try {
-      fs.writeFileSync(this.tokenFile, JSON.stringify(tokenData, null, 2), 'utf8');
+      // The file holds a long-lived refresh token: keep it owner-only.
+      // `mode` only applies when the file is created, so also chmod an
+      // existing file (e.g. one written by an older version as 0644).
+      fs.writeFileSync(this.tokenFile, JSON.stringify(tokenData, null, 2), { encoding: 'utf8', mode: 0o600 });
+      fs.chmodSync(this.tokenFile, 0o600);
     } catch (error) {
       throw new Error(`Failed to save tokens: ${error instanceof Error ? error.message : String(error)}`);
     }
