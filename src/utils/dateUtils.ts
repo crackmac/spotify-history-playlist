@@ -49,21 +49,19 @@ export function isDateUTC(dateUTC: Date, targetDate: Date): boolean {
 }
 
 export function parseDate(dateString: string): Date {
-  const parts = dateString.split('-');
-  if (parts.length !== 3) {
+  const match = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(dateString);
+  if (!match) {
     throw new Error(`Invalid date format: ${dateString}. Use YYYY-MM-DD format.`);
   }
   
-  const year = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10) - 1;
-  const day = parseInt(parts[2], 10);
+  const year = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10) - 1;
+  const day = parseInt(match[3], 10);
   
-  if (isNaN(year) || isNaN(month) || isNaN(day)) {
-    throw new Error(`Invalid date format: ${dateString}. Use YYYY-MM-DD format.`);
-  }
-  
+  // new Date() rolls out-of-range parts over (2026-02-30 -> March 2), so
+  // check that the date we built is the one that was asked for.
   const date = new Date(year, month, day);
-  if (isNaN(date.getTime())) {
+  if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) {
     throw new Error(`Invalid date: ${dateString}.`);
   }
   
