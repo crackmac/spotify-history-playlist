@@ -22,6 +22,32 @@ describe('parseDate', () => {
   }
 });
 
+describe('parseDate rejects dates that do not exist', () => {
+  // new Date(y, m, d) silently rolls these over (2026-02-30 -> March 2),
+  // which would build a playlist for a different day than requested.
+  for (const input of ['2026-02-30', '2026-13-01', '2026-00-10', '2026-04-31', '2025-02-29']) {
+    it(`rejects ${input}`, () => {
+      assert.throws(() => parseDate(input), /Invalid date/);
+    });
+  }
+
+  it('accepts Feb 29 in a leap year', () => {
+    assert.equal(formatDate(parseDate('2028-02-29')), '2028-02-29');
+  });
+});
+
+describe('parseDate rejects malformed parts', () => {
+  for (const input of ['2026-01-15abc', '26-01-15', '2026-01-15T10:00', ' 2026-01-15']) {
+    it(`rejects ${JSON.stringify(input)}`, () => {
+      assert.throws(() => parseDate(input), /Invalid date/);
+    });
+  }
+
+  it('still accepts single-digit month and day', () => {
+    assert.equal(formatDate(parseDate('2026-1-5')), '2026-01-05');
+  });
+});
+
 describe('formatDate', () => {
   it('formats a local date as zero-padded YYYY-MM-DD', () => {
     assert.equal(formatDate(new Date(2026, 0, 5, 23, 30)), '2026-01-05');
